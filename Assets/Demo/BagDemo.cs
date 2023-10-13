@@ -1,5 +1,4 @@
-﻿using Newtonsoft.Json.Linq;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
@@ -9,13 +8,17 @@ namespace SkierFramework.Demo
 {
     public class BagDemo:MonoBehaviour
     {
+        BagSystem bagSystem = new BagSystem();
+
         public void Start()
         {
-            BagSystem.Instance.OnBag_Change += (bagType) =>
+            bagSystem.InitRole(new ItemData());
+
+            bagSystem.OnBagChange += (bagType) =>
             {
                 Debug.LogWarning($"[背包事件]{bagType}背包刷新了");
             };
-            BagSystem.Instance.OnBag_WearChange += (bagType, wearId) =>
+            bagSystem.OnBagWearChange += (bagType, wearId) =>
             {
                 Debug.LogWarning($"[背包事件]{bagType}背包的{wearId}穿戴背包更新了");
             };
@@ -23,20 +26,20 @@ namespace SkierFramework.Demo
             // 加道具
             for (int i = 1; i <= 3; i++)
             {
-                BagSystem.Instance.AcquireItem(i, 100);
+                bagSystem.AcquireItem(i, 100);
             }
             Log("加道具");
 
             // 删道具1
-            BagSystem.Instance.DelItem(1, 50);
+            bagSystem.DelItem(1, 50);
             Log("删道具1");
 
             // 删道具3
-            BagSystem.Instance.DelItem(3, 1000);
+            bagSystem.DelItem(3, 1000);
             Log("删道具3");
 
             // 穿戴道具
-            var bag = BagSystem.Instance.GetOrAddBag(BagType.Default);
+            var bag = bagSystem.GetOrAddBag(BagType.Default);
             var item1 = bag.GetItemByMetaId(1);
             var item2 = bag.GetItemByMetaId(2);
             int slot = 100; //槽位自行设置，槽位冲突时会自动替换
@@ -52,7 +55,7 @@ namespace SkierFramework.Demo
             Log("卸下穿戴");
 
             // 人物升1级
-            var roleItem = BagSystem.Instance.RoleItem;
+            var roleItem = bagSystem.RoleItem;
             roleItem.Add(ItemKey.Level, 1);
             roleItem.SetStr(ItemKey.Name, "巴拉巴拉");
             Log("人物属性修改");
@@ -66,25 +69,25 @@ namespace SkierFramework.Demo
             Log("整理");
 
             // 存档时，只需要存档这个RoleItem即可
-            string json = Newtonsoft.Json.JsonConvert.SerializeObject(BagSystem.Instance.RoleItem);
+            string json = Newtonsoft.Json.JsonConvert.SerializeObject(bagSystem.RoleItem.itemData);
             Debug.Log("存档：" + json);
-            var jsonRoleItem = Newtonsoft.Json.JsonConvert.DeserializeObject<Item>(json);
-            Log("新角色1：", jsonRoleItem);
+            var jsonRoleItem = Newtonsoft.Json.JsonConvert.DeserializeObject<ItemData>(json);
+            Log("新角色1：", new BagSystem().InitRole(jsonRoleItem).RoleItem);
 
             BinaryFormatter bf = new BinaryFormatter();
             MemoryStream ms = new MemoryStream();
-            bf.Serialize(ms, BagSystem.Instance.RoleItem);
+            bf.Serialize(ms, bagSystem.RoleItem.itemData);
             var array = ms.ToArray();
             ms.Seek(0, SeekOrigin.Begin);
-            var newRoleItem = bf.Deserialize(ms) as Item;
-            Log("新角色2：", newRoleItem);
+            var newRoleItem = bf.Deserialize(ms) as ItemData;
+            Log("新角色2：", new BagSystem().InitRole(newRoleItem).RoleItem);
         }
 
         private void Log(string title, Item item = null)
         {
             if (item == null)
             {
-                item = BagSystem.Instance.RoleItem;
+                item = bagSystem.RoleItem;
             }
             string log = $"{title}\n";
             if (item.keyValues != null)

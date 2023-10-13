@@ -5,23 +5,18 @@ using UnityEngine;
 namespace SkierFramework
 {
     /// <summary>
-    /// 把这个BagSystem当成当前角色
+    /// 在无多角色的游戏中，这个就可以认为是整个游戏信息
     /// </summary>
-    public class BagSystem : Singleton<BagSystem>
+    public class BagSystem
     {
         /// <summary>
-        /// 默认背包容量
+        /// 在选角完成后才赋值，退出账号后删除，相当于是当前角色
         /// </summary>
-        public int DEFAULT_BAG_CAPACITY = 50;
-
+        public static BagSystem Instance { get; set; }
         /// <summary>
         /// 当前角色：当前角色背包，以及当前角色数据全部在这里
         /// </summary>
-        private Item _roleItem = new Item();
-        /// <summary>
-        /// 默认排序
-        /// </summary>
-        private Comparer<Item> _defaultCompare = Comparer<Item>.Create(DefaultBagCompare);
+        private Item _roleItem;
         /// <summary>
         /// 背包排序规则:(不同背包排序规则不同，在这里直接设置)
         /// </summary>
@@ -29,11 +24,11 @@ namespace SkierFramework
         /// <summary>
         /// 背包穿戴变更
         /// </summary>
-        public Action<BagType, int> OnBag_WearChange;
+        public Action<BagType, int> OnBagWearChange;
         /// <summary>
         /// 背包变更
         /// </summary>
-        public Action<BagType> OnBag_Change;
+        public Action<BagType> OnBagChange;
         /// <summary>
         /// 当前角色
         /// </summary>
@@ -48,6 +43,15 @@ namespace SkierFramework
         }
 
         /// <summary>
+        /// 初始化角色数据，这个数据可能是读存档
+        /// </summary>
+        public BagSystem InitRole(ItemData entityData)
+        {
+            _roleItem = new Item(entityData, null);
+            return this;
+        }
+
+        /// <summary>
         /// 获取或新增背包
         /// </summary>
         public Bag GetOrAddBag(BagType bagType)
@@ -56,9 +60,9 @@ namespace SkierFramework
             if (bag == null)
             {
                 _bagComparers.TryGetValue(bagType, out var comparer);
-                bag = _roleItem.AddBag(bagType, comparer ?? _defaultCompare);
-                bag.OnBag_Change += (bagType) => { OnBag_Change?.Invoke(bagType); };
-                bag.OnBag_WearChange += (bagType, wearId) => { OnBag_WearChange?.Invoke(bagType, wearId); };
+                bag = _roleItem.GetOrAddBag(bagType);
+                bag.OnBagChange += (bagType) => { OnBagChange?.Invoke(bagType); };
+                bag.OnBagWearChange += (bagType, wearId) => { OnBagWearChange?.Invoke(bagType, wearId); };
             }
             return bag;
         }
@@ -154,39 +158,17 @@ namespace SkierFramework
             return null;
         }
 
-        /// <summary>
-        /// 默认的排序方式
-        /// </summary>
-        private static int DefaultBagCompare(Item a, Item b)
+        public bool IsCanCost(OneItem oneItem, bool isToast = true)
         {
-            if (a == b)
+            if (GetCount(oneItem.id) >= oneItem.num)
             {
-                return 0;
+                return true;
             }
-            else if (a == null)
+            else if (isToast)
             {
-                return -1;
+                Debug.Log(string.Format("{0}不足", oneItem.id));
             }
-            else if (b == null)
-            {
-                return 1;
-            }
-            if (a.ItemConfig.qualityType == b.ItemConfig.qualityType)
-            {
-                if (a.metaId == b.metaId)
-                {
-                    return a.id.CompareTo(b.id);
-                }
-                else
-                {
-                    return a.metaId.CompareTo(b.metaId);
-                }
-            }
-            else
-            {
-                return b.ItemConfig.qualityType.CompareTo(a.ItemConfig.qualityType);
-            }
+            return false;
         }
-
     }
 }
