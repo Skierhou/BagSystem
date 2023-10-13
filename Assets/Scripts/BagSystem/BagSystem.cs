@@ -22,6 +22,10 @@ namespace SkierFramework
         /// </summary>
         private Dictionary<BagType, Comparer<Item>> _bagComparers = new Dictionary<BagType, Comparer<Item>> { };
         /// <summary>
+        /// 默认背包排序
+        /// </summary>
+        private Comparer<Item> _defaultCompare = Comparer<Item>.Create(BagCompare);
+        /// <summary>
         /// 背包穿戴变更
         /// </summary>
         public Action<BagType, int> OnBagWearChange;
@@ -61,10 +65,45 @@ namespace SkierFramework
             {
                 _bagComparers.TryGetValue(bagType, out var comparer);
                 bag = _roleItem.GetOrAddBag(bagType);
+                bag.SetSortComparer(comparer ?? _defaultCompare);
                 bag.OnBagChange += (bagType) => { OnBagChange?.Invoke(bagType); };
                 bag.OnBagWearChange += (bagType, wearId) => { OnBagWearChange?.Invoke(bagType, wearId); };
             }
             return bag;
+        }
+
+        /// <summary>
+        /// 默认排序
+        /// </summary>
+        private static int BagCompare(Item a, Item b)
+        {
+            if (a == b)
+            {
+                return 0;
+            }
+            else if (a == null)
+            {
+                return -1;
+            }
+            else if (b == null)
+            {
+                return 1;
+            }
+            if (a.ItemConfig.qualityType == b.ItemConfig.qualityType)
+            {
+                if (a.metaId == b.metaId)
+                {
+                    return a.id.CompareTo(b.id);
+                }
+                else
+                {
+                    return a.metaId.CompareTo(b.metaId);
+                }
+            }
+            else
+            {
+                return b.ItemConfig.qualityType.CompareTo(a.ItemConfig.qualityType);
+            }
         }
 
         /// <summary>

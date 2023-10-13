@@ -13,11 +13,15 @@ namespace SkierFramework
         /// <summary>
         /// 道具逻辑类
         /// </summary>
-        private Dictionary<ulong, Item> _itemLogics;
+        private Dictionary<ulong, Item> _allItems;
+        /// <summary>
+        /// 带槽位的道具
+        /// </summary>
+        private List<Item> _itemSlots;
         /// <summary>
         /// 排序
         /// </summary>
-        private IComparer<ItemData> _comparer;
+        private IComparer<Item> _comparer;
         /// <summary>
         /// 排序后的道具缓存
         /// </summary>
@@ -28,13 +32,13 @@ namespace SkierFramework
         /// </summary>
         public BagType BagType => _bag.bagType;
         /// <summary>
-        /// 所有槽位，用于显示
+        /// 所有槽位
         /// </summary>
-        public List<ItemData> Slots => _bag.slots;
+        public List<Item> Slots => _itemSlots;
         /// <summary>
         /// 所有道具
         /// </summary>
-        public Dictionary<ulong, Item> AllItems => _itemLogics;
+        public Dictionary<ulong, Item> AllItems => _allItems;
         /// <summary>
         /// 穿戴的背包，支持一种背包多套穿戴组合，可一键替换等功能
         /// </summary>
@@ -52,14 +56,32 @@ namespace SkierFramework
         /// </summary>
         public Action<BagType> OnBagChange;
 
+        /// <summary>
+        /// 构造
+        /// </summary>
         public Bag(BagData bag)
         {
             _bag = bag;
-            _itemLogics = new Dictionary<ulong, Item>();
+            _allItems = new Dictionary<ulong, Item>();
+            _itemSlots = new List<Item>();
+            for (int i = 0; i < bag.bagSize; i++)
+            {
+                _itemSlots.Add(null);
+            }
             foreach (var item in bag.allItems)
             {
-                _itemLogics.Add(item.Key, new Item(item.Value, this));
+                var logic = new Item(item.Value, this);
+                _itemSlots[item.Value.slot] = logic;
+                _allItems.Add(item.Key, logic);
             }
+        }
+
+        /// <summary>
+        /// 设置排序规则
+        /// </summary>
+        public void SetSortComparer(Comparer<Item> comparer)
+        {
+            _comparer = comparer;
         }
 
         /// <summary>
@@ -67,37 +89,41 @@ namespace SkierFramework
         /// </summary>
         public void ChangeSize(int size)
         {
-            while (_bag.slots.Count < size)
+            _bag.bagSize = size;
+            while (_itemSlots.Count < size)
             {
-                _bag.slots.Add(null);
+                _itemSlots.Add(null);
             }
 
-            while (_bag.slots.Count > size)
+            // 通常不会存在背包缩水
+            while (_itemSlots.Count > size)
             {
-                if (_bag.slots[_bag.slots.Count - 1] != null)
+                if (_itemSlots[_itemSlots.Count - 1] != null)
                 {
                     // 说明这个丢了，不过一般不允许缩小空间只有增加
                 }
-                _bag.slots.RemoveAt(_bag.slots.Count - 1);
+                _itemSlots.RemoveAt(_itemSlots.Count - 1);
             }
         }
 
-        public Item GetItemLogic(ulong id)
+        /// <summary>
+        /// 移动道具
+        /// </summary>
+        public bool MoveItem(Item item, int moveToSlot)
         {
-            if (!_bag.allItems.TryGetValue(id, out var itemData))
+            if (item == null || moveToSlot < 0 || _bag.bagSize <= moveToSlot || _itemSlots[item.itemData.slot] != item)
             {
-                return null;
+                return false;
             }
-            if (_itemLogics == null)
+            var endItem = _itemSlots[moveToSlot];
+            if (endItem != null)
             {
-                _itemLogics = new Dictionary<ulong, Item>();
+                endItem.itemData.slot = item.itemData.slot;
+                _itemSlots[item.itemData.slot] = endItem;
             }
-            if (!_itemLogics.TryGetValue(id, out var itemLogic))
-            {
-                itemLogic = new Item(itemData, this);
-                _itemLogics.Add(id, itemLogic);
-            }
-            return itemLogic;
+            _itemSlots[moveToSlot] = item;
+            item.itemData.slot = moveToSlot;
+            return true;
         }
 
         /// <summary>
@@ -106,16 +132,16 @@ namespace SkierFramework
         public bool GetEmptyOrSameSlot(int metaId, out int index)
         {
             index = -1;
-            for (int i = 0; i < _bag.slots.Count; i++)
+            for (int i = 0; i < _itemSlots.Count; i++)
             {
-                ulong invId = _bag.slots[i] == null ? 0 : _bag.slots[i].id;
+                ulong invId = _itemSlots[i] == null ? 0 : _itemSlots[i].id;
                 if ((invId == 0 || !_bag.allItems.ContainsKey(invId)) && index < 0)
                 {
                     index = i;
                 }
                 else if (invId != 0
                     && _bag.allItems.TryGetValue(invId, out ItemData item)
-                    && item.metaId == metaId && !GetItemLogic(item.id).IsFull)
+                    && item.metaId == metaId && !GetItemById(item.id).IsFull)
                 {
                     index = i;
                     return true;
@@ -134,17 +160,18 @@ namespace SkierFramework
             {
                 // 新道具
                 ItemData item = null;
-                if (_bag.slots[index] == null || !_bag.allItems.TryGetValue(_bag.slots[index].id, out item))
+                if (_itemSlots[index] == null || !_bag.allItems.TryGetValue(_itemSlots[index].id, out item))
                 {
                     guid = guid == 0 ? GenerateItemGuid() : guid;
                     item = ObjectPool<ItemData>.Get();
                     item.metaId = inMetaId;
                     item.id = guid;
                     item.count = 0;
-                    _bag.slots[index] = item;
                     _bag.allItems.Add(guid, item);
+                    item.slot = index;
+                    _itemSlots[index] = GetItemById(item.id);
                 }
-                inAmount -= GetItemLogic(item.id).AddAmount(inAmount);
+                inAmount -= GetItemById(item.id).AddAmount(inAmount);
             }
 
             if (inAmount > 0)
@@ -169,15 +196,16 @@ namespace SkierFramework
         {
             while (item != null && item.count > 0 && GetEmptyOrSameSlot(item.metaId, out int index))
             {
-                if (_bag.slots[index] == null)
+                if (_itemSlots[index] == null)
                 {
-                    _bag.slots[index] = item;
                     _bag.allItems.Add(item.id, item);
+                    item.slot = index;
+                    _itemSlots[index] = GetItemById(item.id);
                     item = null;
                 }
                 else
                 {
-                    item.count -= GetItemLogic(_bag.slots[index].id).AddAmount(item.count);
+                    item.count -= _itemSlots[index].AddAmount(item.count);
                 }
             }
             if (isNotify)
@@ -198,11 +226,11 @@ namespace SkierFramework
                 changeCount = item.AddAmount(-count);
                 if (item.count <= 0)
                 {
-                    for (int i = 0; i < _bag.slots.Count; i++)
+                    for (int i = 0; i < _itemSlots.Count; i++)
                     {
-                        if (_bag.slots[i] != null && _bag.slots[i].id == id)
+                        if (_itemSlots[i] != null && _itemSlots[i].id == id)
                         {
-                            _bag.slots[i] = null;
+                            _itemSlots[i] = null;
                             break;
                         }
                     }
@@ -226,7 +254,7 @@ namespace SkierFramework
                         }
                         _bag.wearIdRefs.Remove(id);
                     }
-                    _itemLogics.Remove(item.id);
+                    _allItems.Remove(item.id);
                 }
                 OnBagChange?.Invoke(BagType);
             }
@@ -242,7 +270,7 @@ namespace SkierFramework
             {
                 if (item.metaId == metaId)
                 {
-                    count -= GetItemLogic(item.id).AddAmount(-count);
+                    count -= GetItemById(item.id).AddAmount(-count);
 
                     if (item.count <= 0)
                     {
@@ -421,9 +449,9 @@ namespace SkierFramework
         {
             var dict = _bag.allItems;
             _bag.allItems = new Dictionary<ulong, ItemData>();
-            for (int i = 0; i < _bag.slots.Count; i++)
+            for (int i = 0; i < _itemSlots.Count; i++)
             {
-                _bag.slots[i] = null;
+                _itemSlots[i] = null;
             }
             foreach (var item in dict.Values)
             {
@@ -433,19 +461,24 @@ namespace SkierFramework
                     ObjectPool<ItemData>.Release(item);
                 }
             }
-            //_bag.slots.Sort(_comparer);
+            if (_comparer != null)
+            {
+                _itemSlots.Sort(_comparer);
+                for (int i = 0; i < _itemSlots.Count; i++)
+                {
+                    if (_itemSlots[i] != null)
+                    {
+                        _itemSlots[i].itemData.slot = i;
+                    }
+                }
+            }
         }
-
 
         /// <summary>
         /// 所有存在的道具，没有空位
         /// </summary>
-        public List<Item> GetSortItems()
+        public List<Item> GetNonEmptyList()
         {
-            if (_comparer != null)
-            {
-                _bag.slots.Sort(_comparer);
-            }
             if (_sortItemsNonEmpty == null)
             {
                 _sortItemsNonEmpty = ListPool<Item>.Get();
@@ -454,11 +487,11 @@ namespace SkierFramework
             {
                 _sortItemsNonEmpty.Clear();
             }
-            for (int i = 0; i < _bag.slots.Count; i++)
+            for (int i = 0; i < _itemSlots.Count; i++)
             {
-                if (_bag.slots[i] != null)
+                if (_itemSlots[i] != null)
                 {
-                    _sortItemsNonEmpty.Add(GetItemLogic(_bag.slots[i].id));
+                    _sortItemsNonEmpty.Add(_itemSlots[i]);
                 }
             }
             return _sortItemsNonEmpty;
@@ -469,9 +502,20 @@ namespace SkierFramework
         /// </summary>
         public Item GetItemById(ulong id)
         {
-            if (_bag.allItems.TryGetValue(id, out ItemData item))
-                return GetItemLogic(item.id);
-            return null;
+            if (!_bag.allItems.TryGetValue(id, out var itemData))
+            {
+                return null;
+            }
+            if (_allItems == null)
+            {
+                _allItems = new Dictionary<ulong, Item>();
+            }
+            if (!_allItems.TryGetValue(id, out var itemLogic))
+            {
+                itemLogic = new Item(itemData, this);
+                _allItems.Add(id, itemLogic);
+            }
+            return itemLogic;
         }
 
         /// <summary>
@@ -479,10 +523,10 @@ namespace SkierFramework
         /// </summary>
         public Item GetItemByMetaId(int id)
         {
-            foreach (var item in _bag.allItems.Values)
+            foreach (var item in AllItems.Values)
             {
                 if (item.metaId == id)
-                    return GetItemLogic(item.id);
+                    return item;
             }
             return null;
         }
@@ -492,7 +536,7 @@ namespace SkierFramework
         /// </summary>
         public void Release()
         {
-            _bag.slots.Clear();
+            _itemSlots.Clear();
             _bag.allItems.Clear();
             _bag.wears.Clear();
             _bag.wearIdRefs.Clear();

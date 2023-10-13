@@ -12,6 +12,7 @@ namespace SkierFramework.Demo
 
         public void Start()
         {
+            BagSystem.Instance = bagSystem;
             bagSystem.InitRole(new ItemData());
 
             bagSystem.OnBagChange += (bagType) =>
@@ -68,6 +69,10 @@ namespace SkierFramework.Demo
             bag.Sort();
             Log("整理");
 
+            // 修改位置
+            bag.MoveItem(item1, item2.slot);
+            Log("移动位置");
+
             // 存档时，只需要存档这个RoleItem即可
             string json = Newtonsoft.Json.JsonConvert.SerializeObject(bagSystem.RoleItem.itemData);
             Debug.Log("存档：" + json);
@@ -112,8 +117,9 @@ namespace SkierFramework.Demo
                 foreach (var bag in bags.Values)
                 {
                     log += $"[{bag.BagType}]：";
-                    foreach (var temp in bag.AllItems.Values)
+                    foreach (var temp in bag.Slots)
                     {
+                        if (temp == null) continue;
                         log += $"{{id={temp.id},metaId={temp.metaId},count={temp.count},穿戴={bag.IsWear(temp.id, 1)}}},";
                     }
                     log += "\n";
@@ -138,6 +144,7 @@ namespace SkierFramework.Demo
                     bagType = BagType.Default,
                     overlayCount = 10000,
                     name = "测试" + i,
+                    qualityType = (ItemQualityType)(i / 2),
                     itemType = ItemType.Gold
                 });
             }

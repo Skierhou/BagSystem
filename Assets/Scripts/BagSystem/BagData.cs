@@ -11,10 +11,6 @@ namespace SkierFramework
         /// </summary>
         public BagType bagType;
         /// <summary>
-        /// 槽位
-        /// </summary>
-        public List<ItemData> slots;
-        /// <summary>
         /// 道具
         /// </summary>
         public Dictionary<ulong, ItemData> allItems;
@@ -30,22 +26,22 @@ namespace SkierFramework
         /// 当时使用的穿戴Id
         /// </summary>
         public int useWearId;
+        /// <summary>
+        /// 背包容量
+        /// </summary>
+        public int bagSize;
 
         /// <summary>
         /// 初始化背包
         /// </summary>
         public BagData(BagType bagType, int size)
         {
-            slots = new List<ItemData>(size);
-            for (int i = 0; i < size; i++)
-            {
-                slots.Add(null);
-            }
             allItems = new Dictionary<ulong, ItemData>();
             wears = new Dictionary<int, Dictionary<int, ulong>>();
             wearIdRefs = new Dictionary<ulong, int>();
             this.bagType = bagType;
             this.useWearId = 0;
+            this.bagSize = size;
         }
     }
 

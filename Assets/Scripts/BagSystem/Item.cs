@@ -28,6 +28,7 @@ namespace SkierFramework
         public ulong id => itemData.id;
         public int count => itemData.count;
         public int metaId => itemData.metaId;
+        public int slot => itemData.slot;
         public Dictionary<ItemKey, long> keyValues => itemData.keyValues;
         public Dictionary<ItemKey, string> keyValueStrs => itemData.keyValueStrs;
 
@@ -184,10 +185,6 @@ namespace SkierFramework
             }
             return logic;
         }
-        #endregion
-
-        #region 系统
-        
         #endregion
 
         /// <summary>

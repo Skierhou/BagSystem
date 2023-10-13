@@ -19,6 +19,10 @@ namespace SkierFramework
         /// </summary>
         public int count;
         /// <summary>
+        /// 槽位
+        /// </summary>
+        public int slot;
+        /// <summary>
         /// Kv数据:所有道具身上的属性
         /// </summary>
         public Dictionary<ItemKey, long> keyValues;
