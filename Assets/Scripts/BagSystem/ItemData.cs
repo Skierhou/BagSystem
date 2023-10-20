@@ -35,42 +35,5 @@ namespace SkierFramework
         /// 该道具身上的背包
         /// </summary>
         public Dictionary<BagType, BagData> itemBags;
-
-        /// <summary>
-        /// 克隆
-        /// </summary>
-        public ItemData Clone()
-        {
-            ItemData clone = ObjectPool<ItemData>.Get();
-            clone.id = id;
-            clone.metaId = metaId;
-            clone.count = count;
-            if (keyValues != null)
-            {
-                clone.keyValues = new Dictionary<ItemKey, long>();
-                foreach (var item in keyValues)
-                {
-                    clone.keyValues.Add(item.Key, item.Value);
-                }
-            }
-            if (keyValueStrs != null)
-            {
-                clone.keyValueStrs = new Dictionary<ItemKey, string>();
-                foreach (var item in keyValueStrs)
-                {
-                    clone.keyValueStrs.Add(item.Key, item.Value);
-                }
-            }
-            if (itemBags != null)
-            {
-                clone.itemBags = new Dictionary<BagType, BagData>();
-                foreach (var item in itemBags)
-                {
-                    clone.itemBags.Add(item.Key, item.Value);
-                }
-            }
-            return clone;
-        }
     }
-
 }

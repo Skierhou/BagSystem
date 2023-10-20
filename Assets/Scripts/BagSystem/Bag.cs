@@ -21,12 +21,11 @@ namespace SkierFramework
         /// <summary>
         /// 排序
         /// </summary>
-        private IComparer<Item> _comparer;
+        private Comparer<Item> _comparer;
         /// <summary>
         /// 排序后的道具缓存
         /// </summary>
         private List<Item> _sortItemsNonEmpty;
-
         /// <summary>
         /// 背包类型
         /// </summary>
@@ -46,7 +45,7 @@ namespace SkierFramework
         /// <summary>
         /// 当前使用的穿戴Id
         /// </summary>
-        public int UseWearId => _bag.useWearId;
+        public int UseWearId { get => _bag.useWearId; set => _bag.useWearId = value; }
         /// <summary>
         /// 穿戴变化:背包类型，穿戴id
         /// </summary>
@@ -55,6 +54,11 @@ namespace SkierFramework
         /// 背包变化:背包类型
         /// </summary>
         public Action<BagType> OnBagChange;
+        /// <summary>
+        /// 道具数量变化
+        /// </summary>
+        public Action<Item> OnItemChange;
+        public Comparer<Item> Comparer => _comparer;
 
         /// <summary>
         /// 构造
@@ -172,6 +176,8 @@ namespace SkierFramework
                     _itemSlots[index] = GetItemById(item.id);
                 }
                 inAmount -= GetItemById(item.id).AddAmount(inAmount);
+                OnItemChange?.Invoke(GetItemById(item.id));
+                guid = 0;
             }
 
             if (inAmount > 0)
@@ -207,6 +213,7 @@ namespace SkierFramework
                 {
                     item.count -= _itemSlots[index].AddAmount(item.count);
                 }
+                OnItemChange?.Invoke(_itemSlots[index]);
             }
             if (isNotify)
             {
@@ -224,6 +231,7 @@ namespace SkierFramework
             if (item != null)
             {
                 changeCount = item.AddAmount(-count);
+                OnItemChange?.Invoke(item);
                 if (item.count <= 0)
                 {
                     for (int i = 0; i < _itemSlots.Count; i++)
@@ -271,6 +279,7 @@ namespace SkierFramework
                 if (item.metaId == metaId)
                 {
                     count -= GetItemById(item.id).AddAmount(-count);
+                    OnItemChange?.Invoke(GetItemById(item.id));
 
                     if (item.count <= 0)
                     {
@@ -493,6 +502,10 @@ namespace SkierFramework
                 {
                     _sortItemsNonEmpty.Add(_itemSlots[i]);
                 }
+            }
+            if (_comparer != null)
+            {
+                _sortItemsNonEmpty.Sort(_comparer);
             }
             return _sortItemsNonEmpty;
         }

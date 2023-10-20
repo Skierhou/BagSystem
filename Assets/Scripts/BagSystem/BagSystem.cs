@@ -34,6 +34,10 @@ namespace SkierFramework
         /// </summary>
         public Action<BagType> OnBagChange;
         /// <summary>
+        /// 道具变更
+        /// </summary>
+        public Action<Item> OnItemChange;
+        /// <summary>
         /// 当前角色
         /// </summary>
         public Item RoleItem => _roleItem;
@@ -52,6 +56,14 @@ namespace SkierFramework
         public BagSystem InitRole(ItemData entityData)
         {
             _roleItem = new Item(entityData, null);
+            if (_roleItem.itemBags == null)
+            {
+                _roleItem.itemBags = new Dictionary<BagType, Bag>();
+            }
+            foreach (var bag in _roleItem.itemBags.Values)
+            {
+                InitBag(bag.BagType);
+            }
             return this;
         }
 
@@ -63,12 +75,22 @@ namespace SkierFramework
             var bag = _roleItem.GetBag(bagType);
             if (bag == null)
             {
-                _bagComparers.TryGetValue(bagType, out var comparer);
-                bag = _roleItem.GetOrAddBag(bagType);
-                bag.SetSortComparer(comparer ?? _defaultCompare);
-                bag.OnBagChange += (bagType) => { OnBagChange?.Invoke(bagType); };
-                bag.OnBagWearChange += (bagType, wearId) => { OnBagWearChange?.Invoke(bagType, wearId); };
+                bag = InitBag(bagType);
             }
+            return bag;
+        }
+
+        /// <summary>
+        /// 初始化背包
+        /// </summary>
+        public Bag InitBag(BagType bagType)
+        {
+            _bagComparers.TryGetValue(bagType, out var comparer);
+            var bag = _roleItem.GetOrAddBag(bagType);
+            bag.SetSortComparer(comparer ?? _defaultCompare);
+            bag.OnBagChange += (bagType) => { OnBagChange?.Invoke(bagType); };
+            bag.OnBagWearChange += (bagType, wearId) => { OnBagWearChange?.Invoke(bagType, wearId); };
+            bag.OnItemChange += (item) => { OnItemChange?.Invoke(item); };
             return bag;
         }
 
