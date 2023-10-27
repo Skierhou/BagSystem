@@ -8,8 +8,7 @@ namespace SkierFramework
     {
         Quality = 1, //品质
         Level = 2,   //等级
-        Name = 3,    //名称
-        Exp = 4,     //经验
+        Exp = 3,     //经验
 
         HP = 100,    //血量
         Defense,     //防御

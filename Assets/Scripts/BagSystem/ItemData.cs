@@ -30,7 +30,7 @@ namespace SkierFramework
         /// 字符串数据:为了名称等一些字符串的属性，以及一些玩法数据
         /// 玩法数据的用法举个例子：装备道具，存在随机词条等无法使用一个long来解决的属性
         /// </summary>
-        public Dictionary<ItemKey, string> keyValueStrs;
+        public Dictionary<ItemStrKey, string> keyValueStrs;
         /// <summary>
         /// 该道具身上的背包
         /// </summary>

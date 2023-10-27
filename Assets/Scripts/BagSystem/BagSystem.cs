@@ -43,14 +43,6 @@ namespace SkierFramework
         public Item RoleItem => _roleItem;
 
         /// <summary>
-        /// 获取配置，需自行接入配置系统
-        /// </summary>
-        public T GetConfig<T>(int id) where T : IConfig
-        {
-            return Demo.BagDemo.GetConfig<T>(id);
-        }
-
-        /// <summary>
         /// 初始化角色数据，这个数据可能是读存档
         /// </summary>
         public BagSystem InitRole(ItemData entityData)
@@ -133,7 +125,7 @@ namespace SkierFramework
         /// </summary>
         public void AcquireItem(int id, int count)
         {
-            var itemConfig = GetConfig<ItemConfig>(id);
+            var itemConfig = ConfigManager.Instance.GetConfig<ItemConfig>(id);
             if (itemConfig == null)
             {
                 Debug.LogError("找不到配置：" + id);
@@ -180,7 +172,7 @@ namespace SkierFramework
         /// </summary>
         public long GetCount(int metaId)
         {
-            var itemConfig = GetConfig<ItemConfig>(metaId);
+            var itemConfig = ConfigManager.Instance.GetConfig<ItemConfig>(metaId);
             if (itemConfig != null)
             {
                 long result = 0;

@@ -24,13 +24,13 @@ namespace SkierFramework
         /// <summary>
         /// 是否已满
         /// </summary>
-        public bool IsFull => ItemConfig.overlayCount == itemData.count;
+        public bool IsFull => ItemConfig.overlayCount >= itemData.count;
         public ulong id => itemData.id;
         public int count => itemData.count;
         public int metaId => itemData.metaId;
         public int slot => itemData.slot;
         public Dictionary<ItemKey, long> keyValues => itemData.keyValues;
-        public Dictionary<ItemKey, string> keyValueStrs => itemData.keyValueStrs;
+        public Dictionary<ItemStrKey, string> keyValueStrs => itemData.keyValueStrs;
 
         public Item(ItemData itemData, Bag bagLogic)
         {
@@ -38,7 +38,7 @@ namespace SkierFramework
             this.OwnerBag = bagLogic;
             if (itemData.metaId > 0)
             {
-                ItemConfig = BagSystem.Instance.GetConfig<ItemConfig>(itemData.metaId);
+                ItemConfig = ConfigManager.Instance.GetConfig<ItemConfig>(itemData.metaId);
             }
             if (itemData.itemBags != null)
             {
@@ -88,7 +88,7 @@ namespace SkierFramework
         /// <summary>
         /// 获取属性
         /// </summary>
-        public string GetStr(ItemKey itemKey)
+        public string GetStr(ItemStrKey itemKey)
         {
             if (itemData.keyValueStrs != null)
             {
@@ -101,11 +101,11 @@ namespace SkierFramework
         /// <summary>
         /// 设置属性
         /// </summary>
-        public void SetStr(ItemKey itemKey, string value)
+        public void SetStr(ItemStrKey itemKey, string value)
         {
             if (itemData.keyValueStrs == null)
             {
-                itemData.keyValueStrs = new Dictionary<ItemKey, string>();
+                itemData.keyValueStrs = new Dictionary<ItemStrKey, string>();
             }
             itemData.keyValueStrs[itemKey] = value;
         }
@@ -150,7 +150,7 @@ namespace SkierFramework
             }
             if (!itemData.itemBags.TryGetValue(bagType, out BagData bag))
             {
-                var bagConfig = BagSystem.Instance.GetConfig<BagConfig>((int)bagType);
+                var bagConfig = ConfigManager.Instance.GetConfig<BagConfig>((int)bagType);
                 int size = bagConfig != null ? bagConfig.initSize : BagConfig.DEFAULT_BAG_CAPACITY;
                 bag = new BagData(bagType, size);
                 itemData.itemBags.Add(bagType, bag);
